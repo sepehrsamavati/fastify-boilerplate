@@ -1,6 +1,5 @@
+import { createContainer, asValue } from "awilix";
 import GracefulShutdown from "./infrastructure/GracefulShutdown.js";
-import type { IUserExample } from "./types/entities/user.js";
-import { createContainer, asClass, asValue } from "awilix";
 
 type Constants = {
     projectName: string;

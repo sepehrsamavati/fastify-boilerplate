@@ -8,10 +8,11 @@ import { projectVersion, projectsVersions } from "./helpers/configVersion.js";
 dotenv.config({
     path: [
         ".env",
-        "../core/.env",
-        "../.env",
-        "../../.env",
-        "../../../.env",
+        /** @todo useful for monorepos */
+        // "../core/.env",
+        // "../.env",
+        // "../../.env",
+        // "../../../.env",
     ]
 });
 
