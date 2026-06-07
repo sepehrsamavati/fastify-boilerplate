@@ -1,5 +1,5 @@
 import type { onRequestHookHandler } from "fastify";
-import type { IUserExample } from "../types/entities/user.js";
+import type { IUserViewModel } from "../types/entities/user.js";
 
 export default (async function jwtValidator(request, _reply) {
     try {
@@ -13,7 +13,7 @@ export default (async function jwtValidator(request, _reply) {
     if (!payload)
         return;
 
-    const userInfo = payload as IUserExample;
+    const userInfo = payload as IUserViewModel;
 
     request.locals.user = userInfo;
 }) as onRequestHookHandler;

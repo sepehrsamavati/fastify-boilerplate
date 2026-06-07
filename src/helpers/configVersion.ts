@@ -4,7 +4,7 @@ import process from "node:process";
 
 /**
  * Reads `package.json` (all or a single property)
- * 
+ *
  * Uses **sync** file system call
  */
 export default function packageJsonReader(path: string): unknown | null;
@@ -30,14 +30,16 @@ const isInsideProject = (() => {
 const rootDir = isInsideProject ? path.join(cwd, '../..') : cwd;
 const projectsDir = path.join(rootDir, 'projects');
 
-const projects = fs
-    .readdirSync(projectsDir)
-    .filter((file) => {
-        const projectPath = path.join(projectsDir, file);
-        const isDirectory = fs.statSync(projectPath).isDirectory();
-        const hasPackageJson = fs.existsSync(path.join(projectPath, 'package.json'));
-        return isDirectory && hasPackageJson;
-    });
+const projects = fs.existsSync(projectsDir)
+    ? fs
+        .readdirSync(projectsDir)
+        .filter((file) => {
+            const projectPath = path.join(projectsDir, file);
+            const isDirectory = fs.statSync(projectPath).isDirectory();
+            const hasPackageJson = fs.existsSync(path.join(projectPath, 'package.json'));
+            return isDirectory && hasPackageJson;
+        })
+    : [];
 
 export const projectsVersions = projects.map((project) => {
     const projectPath = path.join(projectsDir, project);

@@ -3,22 +3,37 @@ import Fastify from 'fastify';
 import config from "./config.js";
 import fastifyJwt from '@fastify/jwt';
 import fastifyCookie from '@fastify/cookie';
+import fastifyStatic from '@fastify/static';
+import path from 'node:path';
+import url from 'node:url';
 import { logger } from "./helpers/logger.js";
+import { setRoutes } from "./routes/router.js";
 import type { IServices } from "./types/services.js";
+import GracefulShutdown from "./infrastructure/GracefulShutdown.js";
+
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 export default class HttpServer {
     constructor(private services: IServices) {
-        this.#init();
+        void this.#init();
     }
 
     #fastify = Fastify({
         logger: true,
     });
 
-    #init() {
+    async #init() {
         const coreServices = this.services.core;
+        const gracefulShutdown = GracefulShutdown.getInstance();
+
+        await coreServices.diReady();
 
         this.#fastify.addHook('onRequest', (req, res, done) => {
+            if (!gracefulShutdown.startRequest()) {
+                res.status(503).send({ message: "Server is shutting down" });
+                return;
+            }
+
             const scope = coreServices.createApplicationScope();
 
             req.locals = {
@@ -29,29 +44,34 @@ export default class HttpServer {
             };
 
             res.raw.once('finish', async () => {
+                gracefulShutdown.endRequest();
                 await scope.dispose();
             });
 
             done();
         });
 
-        this.#setupAuth();
+        await this.#setupAuth();
+        await this.#fastify.register(fastifyStatic, {
+            root: path.join(__dirname, '../data/public'),
+            prefix: '/public/',
+            decorateReply: true,
+        });
 
-        /** @todo */
-        // setRoutes(this.#fastify);
+        setRoutes(this.#fastify);
 
-        this.#fastify.listen({
+        await this.#fastify.listen({
             port: config.apiServer.port,
-        })
-            .then(() => {
-                logger.info("Server started");
-            });
+            host: "0.0.0.0",
+        });
+
+        logger.info(`Server started on port ${config.apiServer.port}`);
     }
 
-    #setupAuth() {
-        this.#fastify.register(fastifyCookie)
+    async #setupAuth() {
+        await this.#fastify.register(fastifyCookie);
 
-        this.#fastify.register(fastifyJwt, {
+        await this.#fastify.register(fastifyJwt, {
             secret: config.apiServer.tokenSignSecret,
             cookie: {
                 cookieName: config.apiServer.accessTokenCookieKey,
@@ -60,5 +80,9 @@ export default class HttpServer {
             verify: { extractToken: (req) => req.cookies[config.apiServer.accessTokenCookieKey] },
             decode: { complete: true },
         });
+    }
+
+    async close() {
+        await this.#fastify.close();
     }
 }

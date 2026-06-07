@@ -15,7 +15,6 @@ export default class ExpirableCacheStorage<T extends ExpirableEntity<B>, B> exte
         const item = this.get(key);
 
         if (this.#isExpired(item)) {
-            console.log("expired")
             this.unset(key);
             return null;
         }
